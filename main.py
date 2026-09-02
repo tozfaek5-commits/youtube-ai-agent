@@ -4,10 +4,12 @@ from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from gtts import gTTS
+import asyncio
+import edge_tts
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import ImageClip, AudioFileClip
 import textwrap
+import time
 
 app = Flask(__name__)
 
@@ -36,11 +38,27 @@ def upload_to_youtube(video_path, title, description, tags=[]):
         _, resp = req.next_chunk()
     return resp
 
+async def generate_audio_edge(text, output_path):
+    # صوت عربي احترافي من مايكروسوفت - لا ينحظر
+    communicate = edge_tts.Communicate(text, "ar-SA-HamedNeural", rate="+0%", volume="+0%")
+    await communicate.save(output_path)
+
 def create_video_from_text(topic, output_path="/tmp/final_video.mp4"):
-    script = f"موضوع اليوم: {topic}. في هذا الفيديو سنتعرف على أهم المعلومات حول {topic}. هذه المعلومات مفيدة جداً."
+    script = f"موضوع اليوم: {topic}. في هذا الفيديو سنتعرف على أهم المعلومات حول {topic}. هذه المعلومات مفيدة جداً وستساعدك على فهم الموضوع بشكل أفضل."
+    
     audio_path = "/tmp/audio.mp3"
-    tts = gTTS(text=script, lang='ar', slow=False)
-    tts.save(audio_path)
+    
+    # محاولة توليد الصوت مع إعادة محاولة
+    for attempt in range(3):
+        try:
+            asyncio.run(generate_audio_edge(script, audio_path))
+            break
+        except Exception as e:
+            print(f"TTS attempt {attempt+1} failed: {e}")
+            time.sleep(2)
+            if attempt == 2:
+                raise e
+    
     img_path = "/tmp/bg.jpg"
     img = Image.new('RGB', (1280, 720), color=(15, 15, 30))
     draw = ImageDraw.Draw(img)
@@ -49,14 +67,16 @@ def create_video_from_text(topic, output_path="/tmp/final_video.mp4"):
     wrapped = textwrap.fill(topic, width=20)
     draw.text((100, 300), wrapped, fill=(255, 255, 255), font=font, spacing=20)
     img.save(img_path)
+    
     audio_clip = AudioFileClip(audio_path)
     image_clip = ImageClip(img_path, duration=audio_clip.duration).set_audio(audio_clip)
-    image_clip.write_videofile(output_path, fps=24, codec='libx264', audio_codec='aac')
+    image_clip.write_videofile(output_path, fps=24, codec='libx264', audio_codec='aac', logger=None)
+    
     return output_path, script
 
 @app.route("/")
 def home():
-    return jsonify({"status": "Live ✅", "youtube_configured": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
+    return jsonify({"status": "Live ✅ Fixed TTS", "youtube_configured": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
 
 @app.route("/test")
 def test_page():
@@ -64,9 +84,8 @@ def test_page():
 <!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>اختبار YouTube AI Agent</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YouTube AI Agent</title>
 <style>
 body{font-family:Tahoma;background:#0f0f1e;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
 .card{background:#1e1e3a;padding:30px;border-radius:15px;width:90%;max-width:500px;box-shadow:0 10px 30px rgba(0,0,0,0.5)}
@@ -80,9 +99,9 @@ a{color:#70a1ff}
 </head>
 <body>
 <div class="card">
-<h1>🎬 YouTube AI Agent</h1>
-<p style="text-align:center;color:#aaa">يكتب ويرفع كـ Private Draft</p>
-<input id="topic" placeholder="موضوع الفيديو - مثال: فوائد الصيام" value="فوائد الصيام">
+<h1>🎬 YouTube AI Agent 🎬</h1>
+<p style="text-align:center;color:#aaa">يكتب ويرفع كـ Private Draft - تم إصلاح الصوت</p>
+<input id="topic" placeholder="موضوع الفيديو" value="قصة عن الجيران">
 <input id="title" placeholder="عنوان الفيديو">
 <textarea id="desc" placeholder="وصف الفيديو"></textarea>
 <button onclick="generate()">🚀 ولّد وارفع كمسودة Private</button>
@@ -95,22 +114,22 @@ async function generate(){
   const desc=document.getElementById('desc').value || 'فيديو تعليمي عن ' + topic;
   const btn=document.querySelector('button');
   const resDiv=document.getElementById('result');
-  btn.innerText='⏳ جاري التوليد والرفع... قد يستغرق دقيقة';
+  btn.innerText='⏳ جاري التوليد والرفع... دقيقة واحدة';
   btn.disabled=true;
   resDiv.style.display='block';
-  resDiv.innerHTML='⏳ يتم توليد الصوت والفيديو ورفعه... لا تغلق الصفحة';
+  resDiv.innerHTML='⏳ يتم توليد الصوت الاحترافي والفيديو ورفعه... لا تغلق الصفحة';
   try{
     const r=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic,title,description:desc})});
     const data=await r.json();
     if(data.success){
-      resDiv.innerHTML=`✅ <b>تم الرفع كمسودة Private!</b><br><br>🎬 <a href="${data.youtube_url}" target="_blank">${data.youtube_url}</a><br><br>🔒 اذهب إلى YouTube Studio > Content ستجده كـ Private<br>اضغط Publish عندما تريد نشره يدوياً`;
-      btn.innerText='✅ تم بنجاح - جرب موضوع آخر';
+      resDiv.innerHTML=`✅ <b>تم الرفع كمسودة Private!</b><br><br>🎬 <a href="${data.youtube_url}" target="_blank">${data.youtube_url}</a><br><br>🔒 اذهب إلى YouTube Studio > Content ستجده كـ Private`;
+      btn.innerText='✅ تم بنجاح';
     }else{
       resDiv.innerHTML='❌ خطأ: '+data.error;
       btn.innerText='حاول مرة أخرى';
     }
   }catch(e){
-    resDiv.innerHTML='❌ خطأ في الاتصال: '+e;
+    resDiv.innerHTML='❌ خطأ: '+e;
     btn.innerText='حاول مرة أخرى';
   }
   btn.disabled=false;
@@ -123,14 +142,15 @@ async function generate(){
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.json or {}
-    topic = data.get("topic", "فوائد الصيام")
+    topic = data.get("topic", "قصة عن الجيران")
     title = data.get("title", f"{topic} | فيديو AI")
-    description = data.get("description", f"فيديو تعليمي عن {topic}")
+    description = data.get("description", f"فيديو عن {topic}")
     try:
         video_path, script = create_video_from_text(topic)
         result = upload_to_youtube(video_path, title, description, tags=[topic, "AI"])
-        return jsonify({"success": True, "youtube_id": result["id"], "youtube_url": f"https://www.youtube.com/watch?v={result['id']}", "status": "PRIVATE"})
+        return jsonify({"success": True, "youtube_id": result["id"], "youtube_url": f"https://www.youtube.com/watch?v={result['id']}"})
     except Exception as e:
+        print(f"Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
