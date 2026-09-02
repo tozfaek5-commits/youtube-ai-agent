@@ -1,10 +1,12 @@
 flask
-openai
 google-api-python-client
 google-auth
 google-auth-oauthlib
-moviepy
-pydub
+Pillow
 requests
 python-dotenv
 edge-tts
+moviepy==1.0.3
+imageio==2.31.5
+imageio-ffmpeg==0.4.8
+decorator==4.4.2
