@@ -2,8 +2,8 @@ flask
 google-api-python-client
 google-auth
 google-auth-oauthlib
-moviepy
 pillow
 edge-tts
 requests
 python-dotenv
+moviepy
