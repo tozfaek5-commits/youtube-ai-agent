@@ -7,4 +7,3 @@ moviepy
 pydub
 requests
 python-dotenv
-edge-tts
