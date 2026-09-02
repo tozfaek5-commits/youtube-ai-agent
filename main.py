@@ -22,7 +22,7 @@ def get_youtube_client():
 
 @app.route("/")
 def home():
-    return jsonify({"status": "Live ✅ Final", "youtube_ready": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
+    return jsonify({"status": "Live ✅ Final Fixed", "youtube_ready": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
 
 @app.route("/test")
 def test_page():
@@ -39,8 +39,9 @@ a{color:#70a1ff}
 </style></head>
 <body>
 <div class="card">
-<h2>🎬 YouTube AI Agent</h2>
-<input id="topic" value="فوائد الصيام" placeholder="موضوع الفيديو">
+<h2>🎬 YouTube AI Agent 🎬</h2>
+<p style="color:#aaa;font-size:13px">تم إصلاح set_audio ✅</p>
+<input id="topic" value="قصة عن تحقيق الحلم" placeholder="موضوع الفيديو">
 <button id="btn" onclick="gen()">🚀 ولد وارفع كـ Private</button>
 <div id="res"></div>
 </div>
@@ -49,11 +50,11 @@ async function gen(){
   const t=document.getElementById('topic').value;
   const b=document.getElementById('btn');
   const r=document.getElementById('res');
-  b.innerText='⏳ جاري...'; b.disabled=true; r.style.display='block'; r.innerHTML='⏳ توليد صوت احترافي ورفع...';
+  b.innerText='⏳ جاري التوليد... 60 ثانية'; b.disabled=true; r.style.display='block'; r.innerHTML='⏳ توليد صوت Hamed الاحترافي وفيديو ورفعه...';
   try{
     const resp=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic:t})});
     const data=await resp.json();
-    if(data.success){ r.innerHTML='✅ تم!<br><a href="'+data.url+'" target="_blank">'+data.url+'</a>'; b.innerText='✅ تم بنجاح'; }
+    if(data.success){ r.innerHTML='✅ تم الرفع كـ Private!<br><br><a href="'+data.url+'" target="_blank">'+data.url+'</a><br><br>اذهب لـ YouTube Studio > Content'; b.innerText='✅ تم بنجاح'; }
     else{ r.innerHTML='❌ '+data.error; b.innerText='حاول مرة أخرى'; }
   }catch(e){ r.innerHTML='❌ '+e; b.innerText='حاول مرة أخرى'; }
   b.disabled=false;
@@ -65,13 +66,12 @@ async function gen(){
 @app.route("/generate", methods=["POST"])
 def generate():
     data = request.json or {}
-    topic = data.get("topic", "فوائد الصيام")
+    topic = data.get("topic", "قصة عن تحقيق الحلم")
     try:
         import edge_tts
         from PIL import Image, ImageDraw
         import textwrap
 
-        # استيراد moviepy داخل الدالة حتى لا يفشل الـ Deploy
         try:
             from moviepy.editor import ImageClip, AudioFileClip
         except ImportError:
@@ -80,20 +80,27 @@ def generate():
         async def make_audio(txt, out):
             await edge_tts.Communicate(txt, "ar-SA-HamedNeural").save(out)
 
-        script = f"موضوع اليوم: {topic}. سنتعرف على اهم المعلومات حول {topic}."
+        script = f"قصة عن {topic}. {topic} هو موضوع مهم جدا يستحق ان نتحدث عنه بالتفصيل."
         asyncio.run(make_audio(script, "/tmp/audio.mp3"))
 
-        img = Image.new('RGB', (1280, 720), color=(15, 15, 30))
+        img = Image.new('RGB', (1280, 720), color=(15, 15, 35))
         draw = ImageDraw.Draw(img)
         draw.text((100, 300), textwrap.fill(topic, width=20), fill=(255,255,255))
         img.save("/tmp/bg.jpg")
 
         audio_clip = AudioFileClip("/tmp/audio.mp3")
-        image_clip = ImageClip("/tmp/bg.jpg", duration=audio_clip.duration).set_audio(audio_clip)
-        image_clip.write_videofile("/tmp/final.mp4", fps=24, codec='libx264', audio_codec='aac', logger=None)
+        image_clip = ImageClip("/tmp/bg.jpg", duration=audio_clip.duration)
+
+        # إصلاح moviepy v1 vs v2
+        try:
+            final_clip = image_clip.set_audio(audio_clip)  # v1
+        except AttributeError:
+            final_clip = image_clip.with_audio(audio_clip)  # v2 الجديد
+
+        final_clip.write_videofile("/tmp/final.mp4", fps=24, codec='libx264', audio_codec='aac', logger=None)
 
         youtube = get_youtube_client()
-        body = {"snippet": {"title": topic[:95], "description": f"فيديو عن {topic}", "categoryId": "27"}, "status": {"privacyStatus": "private", "selfDeclaredMadeForKids": False}}
+        body = {"snippet": {"title": topic[:95], "description": f"فيديو عن {topic} - تم إنشاؤه تلقائيا", "categoryId": "27"}, "status": {"privacyStatus": "private", "selfDeclaredMadeForKids": False}}
         media = MediaFileUpload("/tmp/final.mp4", chunksize=-1, resumable=True, mimetype="video/mp4")
         req = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
         resp = None
