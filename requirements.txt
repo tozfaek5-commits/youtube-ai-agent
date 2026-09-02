@@ -2,9 +2,8 @@ flask
 google-api-python-client
 google-auth
 google-auth-oauthlib
-moviepy==1.0.3
+moviepy
 pillow
 edge-tts
 requests
 python-dotenv
-imageio-ffmpeg
