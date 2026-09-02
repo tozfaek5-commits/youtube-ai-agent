@@ -1,9 +1,10 @@
 flask
+openai
 google-api-python-client
 google-auth
 google-auth-oauthlib
-pillow
-edge-tts
+moviepy
+pydub
 requests
 python-dotenv
-moviepy
+edge-tts
