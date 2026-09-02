@@ -9,17 +9,23 @@ import asyncio
 app = Flask(__name__)
 
 def get_youtube_client():
+    client_id = (os.getenv("GOOGLE_CLIENT_ID") or "").strip()
+    client_secret = (os.getenv("GOOGLE_CLIENT_SECRET") or "").strip()
+    refresh_token = (os.getenv("GOOGLE_REFRESH_TOKEN") or "").strip()
+
+    if not client_id or not client_secret or not refresh_token:
+        raise ValueError("بيانات Google OAuth غير مكتملة في Environment Variables")
+
     creds = Credentials(
         token=None,
-        refresh_token=os.getenv("GOOGLE_REFRESH_TOKEN"),
+        refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
-        client_id=os.getenv("GOOGLE_CLIENT_ID"),
-        client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+        client_id=client_id,
+        client_secret=client_secret,
         scopes=["https://www.googleapis.com/auth/youtube.upload"]
     )
     creds.refresh(Request())
     return build("youtube", "v3", credentials=creds)
-
 @app.route("/")
 def home():
     return jsonify({"status": "Live ✅ Final Fixed", "youtube_ready": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
