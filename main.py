@@ -9,12 +9,14 @@ import asyncio
 app = Flask(__name__)
 
 def get_youtube_client():
+    # استخدام strip لحذف أي أسطر جديدة أو مسافات خفية تأتي من الاستضافة
     client_id = (os.getenv("GOOGLE_CLIENT_ID") or "").strip()
     client_secret = (os.getenv("GOOGLE_CLIENT_SECRET") or "").strip()
     refresh_token = (os.getenv("GOOGLE_REFRESH_TOKEN") or "").strip()
 
+    # التحقق من وجود المتغيرات
     if not client_id or not client_secret or not refresh_token:
-        raise ValueError("بيانات Google OAuth غير مكتملة في Environment Variables")
+        raise ValueError("بيانات Google OAuth غير مكتملة في المتغيرات البيئية (Environment Variables)")
 
     creds = Credentials(
         token=None,
@@ -26,6 +28,7 @@ def get_youtube_client():
     )
     creds.refresh(Request())
     return build("youtube", "v3", credentials=creds)
+
 @app.route("/")
 def home():
     return jsonify({"status": "Live ✅ Final Fixed", "youtube_ready": bool(os.getenv("GOOGLE_REFRESH_TOKEN"))})
@@ -46,7 +49,7 @@ a{color:#70a1ff}
 <body>
 <div class="card">
 <h2>🎬 YouTube AI Agent 🎬</h2>
-<p style="color:#aaa;font-size:13px">تم إصلاح set_audio ✅</p>
+<p style="color:#aaa;font-size:13px">تم إضافة إصلاح المتغيرات وإدارة الذاكرة ✅</p>
 <input id="topic" value="قصة عن تحقيق الحلم" placeholder="موضوع الفيديو">
 <button id="btn" onclick="gen()">🚀 ولد وارفع كـ Private</button>
 <div id="res"></div>
@@ -112,6 +115,14 @@ def generate():
         resp = None
         while resp is None:
             _, resp = req.next_chunk()
+
+        # إغلاق المقاطع لتحرير الذاكرة وتجنب Crash الاستضافة
+        try:
+            audio_clip.close()
+            image_clip.close()
+            final_clip.close()
+        except Exception:
+            pass
 
         return jsonify({"success": True, "url": f"https://www.youtube.com/watch?v={resp['id']}"})
     except Exception as e:
