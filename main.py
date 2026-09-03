@@ -50,7 +50,7 @@ a{color:#70a1ff}
 <div class="card">
 <h2>🎬 YouTube AI Agent 🎬</h2>
 <p style="color:#aaa;font-size:13px">تم إضافة إصلاح المتغيرات وإدارة الذاكرة ✅</p>
-<input id="topic" value="قصة عن تحقيق الحلم" placeholder="موضوع الفيديو">
+<textarea id="topic" rows="6" style="width:100%;padding:12px;margin:10px 0;border-radius:8px;border:none;background:#2a2a4a;color:#fff;font-family:Tahoma;" placeholder="اكتب القصة كاملة هنا..."></textarea>
 <button id="btn" onclick="gen()">🚀 ولد وارفع كـ Private</button>
 <div id="res"></div>
 </div>
