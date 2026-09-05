@@ -1,9 +1,8 @@
-Flask==3.0.0
-gunicorn==21.2.0
-google-auth==2.28.0
-google-auth-oauthlib==1.1.0
-google-api-python-client==2.108.0
-edge-tts==6.1.10
-Pillow==10.4.0
-moviepy==2.1.2
-imageio-ffmpeg==0.4.9
+Flask
+gunicorn
+google-auth
+google-auth-oauthlib
+google-api-python-client
+edge-tts
+Pillow
+moviepy==1.0.3
